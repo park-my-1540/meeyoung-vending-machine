@@ -1,3 +1,6 @@
+// ─────────────────────────────
+//  타입 및 상태 변수 정의
+// ─────────────────────────────
 var __assign = (this && this.__assign) || function () {
     __assign = Object.assign || function(t) {
         for (var s, i = 1, n = arguments.length; i < n; i++) {
@@ -45,12 +48,13 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
         if (op[0] & 5) throw op[1]; return { value: op[0] ? op[1] : void 0, done: true };
     }
 };
+// 음료 재고 현황
 var inventory = {
     cola: { price: 1100, stock: 2 },
     water: { price: 600, stock: 2 },
     coffee: { price: 700, stock: 2 },
 };
-// 자판기내에 가지고 있는 화폐의 갯수 임시
+// 자판기 내부 화폐 재고 (단위별 개수)
 var cashStock = {
     10000: 10,
     5000: 10,
@@ -58,16 +62,21 @@ var cashStock = {
     500: 10,
     100: 10,
 };
+// 결제 승인 시 딜레이 시뮬레이션
 var CASH_DELAY_MS = 500;
 var CARD_DELAY_MS = 1000;
-var APPROVE_RATE = 0.8; // 승인 확률
+var APPROVE_RATE = 0.8; // 결제 승인 확률
+// 사용자의 선택/상태 관리
 var userOrders = new Map(); // 사용자가 주문한 음료수
-var balance = 0; // 잔액
-var paymentMethod = null; // 결제 수단
-var cashApproved = false; // 현금 승인 여부
+var balance = 0; // 투입된 총 금액
+var paymentMethod = null; // 현재 결제 수단
+// 결제 유효성 상태
+var cashApproved = false; // 현금 사용 가능 여부
 var cardApproved = false; // 카드 승인 여부
-var isRefundingChange = false; // 반환 여부
-var cardUsedOnce = false; // 카드 사용 여부
+// 시스템 흐름 제어
+var isRefundingChange = false; // 잔돈 반환 중 여부
+var cardUsedOnce = false; // 카드 결제 1회 제한 여부
+// 로그 출력 위치 식별자
 var LogType;
 (function (LogType) {
     LogType["DEFAULT"] = "log";

@@ -1,18 +1,23 @@
-type Drink = "cola" | "water" | "coffee";
-type PaymentMethod = "cash" | "card";
+// ─────────────────────────────
+//  타입 및 상태 변수 정의
+// ─────────────────────────────
+
+type Drink = "cola" | "water" | "coffee"; // 자판기에서 판매하는 음료 타입
+type PaymentMethod = "cash" | "card"; // 결제 수단 타입
 
 interface Item {
-  price: number;
-  stock: number;
+  price: number; // 가격
+  stock: number; // 재고
 }
 
+// 음료 재고 현황
 let inventory: Record<Drink, Item> = {
   cola: { price: 1100, stock: 2 },
   water: { price: 600, stock: 2 },
   coffee: { price: 700, stock: 2 },
 };
 
-// 자판기내에 가지고 있는 화폐의 갯수 임시
+// 자판기 내부 화폐 재고 (단위별 개수)
 let cashStock = {
   10000: 10,
   5000: 10,
@@ -21,22 +26,27 @@ let cashStock = {
   100: 10,
 };
 
-type CashAmount = keyof typeof cashStock;
+type CashAmount = keyof typeof cashStock; // 화폐 단위 타입
 
+// 결제 승인 시 딜레이 시뮬레이션
 const CASH_DELAY_MS = 500;
 const CARD_DELAY_MS = 1000;
-const APPROVE_RATE = 0.8; // 승인 확률
+const APPROVE_RATE = 0.8; // 결제 승인 확률
 
+// 사용자의 선택/상태 관리
 let userOrders = new Map<Drink, number>(); // 사용자가 주문한 음료수
-let balance: number = 0; // 잔액
-let paymentMethod: PaymentMethod | null = null; // 결제 수단
+let balance: number = 0; // 투입된 총 금액
+let paymentMethod: PaymentMethod | null = null; // 현재 결제 수단
 
-let cashApproved: boolean = false; // 현금 승인 여부
+// 결제 유효성 상태
+let cashApproved: boolean = false; // 현금 사용 가능 여부
 let cardApproved: boolean = false; // 카드 승인 여부
 
-let isRefundingChange = false; // 반환 여부
-let cardUsedOnce = false; // 카드 사용 여부
+// 시스템 흐름 제어
+let isRefundingChange = false; // 잔돈 반환 중 여부
+let cardUsedOnce = false; // 카드 결제 1회 제한 여부
 
+// 로그 출력 위치 식별자
 enum LogType {
   DEFAULT = "log",
   CARD = "card-log",
