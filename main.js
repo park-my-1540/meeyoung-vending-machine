@@ -67,6 +67,7 @@ var paymentMethod = null; // 결제 수단
 var cashApproved = false; // 현금 승인 여부
 var cardApproved = false; // 카드 승인 여부
 var isRefundingChange = false; // 반환 여부
+var cardUsedOnce = false; // 카드 사용 여부
 var LogType;
 (function (LogType) {
     LogType["DEFAULT"] = "log";
@@ -243,8 +244,6 @@ function useCash(amount) {
                     else {
                         cashLog("사용불가능한 지폐입니다. 지폐를 다시 넣어주세요.");
                         cashApproved = false;
-                        refreshDrinkButtons();
-                        init();
                     }
                     return [2 /*return*/];
             }
@@ -289,13 +288,18 @@ function selectDrink(drink) {
         refreshDrinkButtons();
         return log(error);
     }
+    processPayment(drink);
+}
+function processPayment(drink) {
     if (paymentMethod === "cash") {
         subtractFromBalance(inventory[drink].price);
+        buyDrink(drink);
     }
     if (paymentMethod === "card") {
         log("\uCE74\uB4DC ".concat(inventory[drink].price, "\uC6D0 \uC2B9\uC778 \uC644\uB8CC!"));
+        buyDrink(drink);
+        orderEnd();
     }
-    buyDrink(drink);
 }
 function buyDrink(drink) {
     decreaseInventory(drink);
@@ -304,9 +308,11 @@ function buyDrink(drink) {
     initPaymentLog();
 }
 function orderEnd() {
+    cardUsedOnce = true;
     initPaymentLog();
-    init();
-    logDrinkStateMsg(null);
+    initPaymentMethod();
+    refreshDrinkButtons();
+    cardUsedOnce = false;
 }
 function checkValidate() {
     if (!cashApproved && paymentMethod === "cash") {
@@ -314,6 +320,9 @@ function checkValidate() {
     }
     if (!cardApproved && paymentMethod === "card") {
         return "사용불가능한 카드입니다. 결제수단을 다시 선택해주세요.";
+    }
+    if (cardUsedOnce) {
+        return "주문이 완료되었습니다. 다시 주문하려면 결제 수단을 선택해주세요.";
     }
     if (paymentMethod === null) {
         return "결제수단을 선택해주세요.";

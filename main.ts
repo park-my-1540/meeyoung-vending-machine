@@ -33,6 +33,7 @@ let cashApproved: boolean = false; // 현금 승인 여부
 let cardApproved: boolean = false; // 카드 승인 여부
 
 let isRefundingChange = false; // 반환 여부
+let cardUsedOnce = false; // 카드 사용 여부
 
 enum LogType {
   DEFAULT = "log",
@@ -106,7 +107,6 @@ function refreshDrinkButtons(isRefundingChange?: boolean): void {
       updateDrinkButtonUI(drink, null);
     } else {
       const drinkStatus = getValidateStatus(drink); //유효성 검사
-
       logDrinkStateMsg(drinkStatus); // 유효성 검사 결과 메세지 출력
       updateDrinkButtonUI(drink, drinkStatus); // 유효성 검사 결과 버튼 UI 업데이트
     }
@@ -215,8 +215,6 @@ async function useCash(amount: number): Promise<void> {
   } else {
     cashLog("사용불가능한 지폐입니다. 지폐를 다시 넣어주세요.");
     cashApproved = false;
-    refreshDrinkButtons();
-    init();
   }
 }
 
@@ -251,15 +249,19 @@ function selectDrink(drink: Drink): void {
     refreshDrinkButtons();
     return log(error);
   }
+  processPayment(drink);
+}
 
+function processPayment(drink: Drink): void {
   if (paymentMethod === "cash") {
     subtractFromBalance(inventory[drink].price);
+    buyDrink(drink);
   }
   if (paymentMethod === "card") {
     log(`카드 ${inventory[drink].price}원 승인 완료!`);
+    buyDrink(drink);
+    orderEnd();
   }
-
-  buyDrink(drink);
 }
 
 function buyDrink(drink: Drink): void {
@@ -270,9 +272,11 @@ function buyDrink(drink: Drink): void {
 }
 
 function orderEnd(): void {
+  cardUsedOnce = true;
   initPaymentLog();
-  init();
-  logDrinkStateMsg(null);
+  initPaymentMethod();
+  refreshDrinkButtons();
+  cardUsedOnce = false;
 }
 
 function checkValidate(): string | null {
@@ -281,6 +285,9 @@ function checkValidate(): string | null {
   }
   if (!cardApproved && paymentMethod === "card") {
     return "사용불가능한 카드입니다. 결제수단을 다시 선택해주세요.";
+  }
+  if (cardUsedOnce) {
+    return "주문이 완료되었습니다. 다시 주문하려면 결제 수단을 선택해주세요.";
   }
   if (paymentMethod === null) {
     return "결제수단을 선택해주세요.";
