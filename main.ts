@@ -12,8 +12,8 @@ let inventory: Record<Drink, Item> = {
   coffee: { price: 700, stock: 2 },
 };
 
-// 자판기내에 가지고 있는 화폐의 갯수
-let cashInventory = {
+// 자판기내에 가지고 있는 화폐의 갯수 임시
+let cashStock = {
   10000: 10,
   5000: 10,
   1000: 10,
@@ -88,10 +88,10 @@ function renderInventory(): void {
   if (el) el.innerHTML = msg;
 }
 
-function renderCashInventory(): void {
+function renderCashStock(): void {
   const el = document.getElementById("cash-inventory-log");
   let msg = "";
-  for (const [key, value] of Object.entries(cashInventory)) {
+  for (const [key, value] of Object.entries(cashStock)) {
     msg += `<p>${key}원 ${value}개</p>`;
   }
   if (el) el.innerHTML = msg;
@@ -128,8 +128,7 @@ function updateDrinkBtnUI(drink: Drink, error: string | null): void {
 }
 
 // 결제 수단 버튼 비활성화
-function disablePaymentBtns(method: PaymentMethod): void {
-  paymentMethod = method;
+function togglePaymentBtn(method: PaymentMethod): void {
   if (method === "cash") {
     document
       .querySelectorAll("._cardContainer button")
@@ -139,7 +138,6 @@ function disablePaymentBtns(method: PaymentMethod): void {
     document
       .querySelectorAll("._cashContainer button")
       .forEach((btn) => btn.setAttribute("disabled", "true"));
-
     document.querySelector("#return-change")?.setAttribute("disabled", "true");
   }
 }
@@ -186,18 +184,17 @@ function addToOrder(drink: Drink): void {
 }
 
 // 주요 로직 함수
-
 // 잔액 반환
-function returnChange(): void {
+function refundChange(): void {
   isRefundingChange = true;
 
   const change = findChange(balance);
   for (const coin in change) {
-    cashInventory[coin] -= change[coin];
+    decreaseCashStock(Number(coin));
   }
-  renderCashInventory();
 
   log(`거스름돈 ${balance}원 반환 완료!`);
+  renderCashStock();
   initBalance();
   enablePaymentBtns();
 
@@ -206,7 +203,8 @@ function returnChange(): void {
 
 // 현금 결제
 async function useCash(amount: number): Promise<void> {
-  disablePaymentBtns("cash");
+  togglePaymentBtn("cash");
+  paymentMethod = "cash";
   cashLog("지폐 확인 중...");
 
   const approved: boolean = await validateCash(amount);
@@ -218,17 +216,18 @@ async function useCash(amount: number): Promise<void> {
   }
 }
 
-// 현금 결제 성공 하면 잔액 증가, 음료 버튼 활성화, 로그 출력
 function successCash(amount: number): void {
   cashApproved = true;
   addToBalance(amount);
+  increaseCashStock(amount);
+
   cashLog("사용 가능한 지폐 확인 완료!");
 }
 
 async function useCard(): Promise<void> {
-  disablePaymentBtns("card");
+  togglePaymentBtn("card");
+  paymentMethod = "card";
   cardLog("결제 승인 중...");
-
   const approved: boolean = await validateCard();
   cardApproved = approved;
 
@@ -264,6 +263,20 @@ function processPayment(drink: Drink): void {
   }
 }
 
+function increaseCashStock(amount: number): void {
+  if (cashStock[amount] !== undefined) {
+    cashStock[amount]++;
+  }
+  renderCashStock();
+}
+
+function decreaseCashStock(amount: number): void {
+  if (cashStock[amount] !== undefined) {
+    cashStock[amount]--;
+  }
+  renderCashStock();
+}
+
 function buyDrink(drink: Drink): void {
   decreaseInventory(drink);
   addToOrder(drink);
@@ -279,7 +292,8 @@ function cardOrderEnd(): void {
   cardUsedOnce = false;
 }
 
-function checkValidate(): string | null {
+// 유효성 검사 함수 - 결제 수단 유효성 검사
+function validatePayment(): string | null {
   if (!cashApproved && paymentMethod === "cash") {
     return "사용불가능한 지폐입니다. 지폐를 다시 넣어주세요.";
   }
@@ -295,8 +309,8 @@ function checkValidate(): string | null {
   return null;
 }
 
-// 유효성 검사 함수
-function canBuy(drink: Drink): string | null {
+// 유효성 검사 함수 - 음료 구매 유효성 검사
+function validatePurchase(drink: Drink): string | null {
   if (paymentMethod === "cash" && !isEnoughBalance(drink)) {
     return "잔액이 부족합니다.";
   }
@@ -312,7 +326,7 @@ function canBuy(drink: Drink): string | null {
 }
 
 function getValidateStatus(drink: Drink): string | null {
-  return canBuy(drink) || checkValidate();
+  return validatePurchase(drink) || validatePayment();
 }
 
 function validateCash(amount: number): Promise<boolean> {
@@ -350,7 +364,7 @@ function canGiveChange(drink: Drink): boolean {
 
 // 잔돈 찾기
 function findChange(amount: number): Record<number, number> | null {
-  const coins = Object.keys(cashInventory)
+  const coins = Object.keys(cashStock)
     .map(Number)
     .sort((a, b) => b - a);
 
@@ -383,7 +397,7 @@ function findChange(amount: number): Record<number, number> | null {
     }
     return null;
   }
-  return dfs(amount, 0, { ...cashInventory }, {});
+  return dfs(amount, 0, { ...cashStock }, {});
 }
 
 // 초기화 + 유틸함수
@@ -407,7 +421,7 @@ function initUserOrders(): void {
 
 function initInventory(): void {
   renderInventory();
-  renderCashInventory();
+  renderCashStock();
 }
 
 // 모든 버튼 디바운스 적용 - 중복 클릭방지

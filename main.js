@@ -50,8 +50,8 @@ var inventory = {
     water: { price: 600, stock: 2 },
     coffee: { price: 700, stock: 2 },
 };
-// 자판기내에 가지고 있는 화폐의 갯수
-var cashInventory = {
+// 자판기내에 가지고 있는 화폐의 갯수 임시
+var cashStock = {
     10000: 10,
     5000: 10,
     1000: 10,
@@ -121,10 +121,10 @@ function renderInventory() {
     if (el)
         el.innerHTML = msg;
 }
-function renderCashInventory() {
+function renderCashStock() {
     var el = document.getElementById("cash-inventory-log");
     var msg = "";
-    for (var _i = 0, _a = Object.entries(cashInventory); _i < _a.length; _i++) {
+    for (var _i = 0, _a = Object.entries(cashStock); _i < _a.length; _i++) {
         var _b = _a[_i], key = _b[0], value = _b[1];
         msg += "<p>".concat(key, "\uC6D0 ").concat(value, "\uAC1C</p>");
     }
@@ -161,9 +161,8 @@ function updateDrinkBtnUI(drink, error) {
     }
 }
 // 결제 수단 버튼 비활성화
-function disablePaymentBtns(method) {
+function togglePaymentBtn(method) {
     var _a, _b;
-    paymentMethod = method;
     if (method === "cash") {
         document
             .querySelectorAll("._cardContainer button")
@@ -214,14 +213,14 @@ function addToOrder(drink) {
 }
 // 주요 로직 함수
 // 잔액 반환
-function returnChange() {
+function refundChange() {
     isRefundingChange = true;
     var change = findChange(balance);
     for (var coin in change) {
-        cashInventory[coin] -= change[coin];
+        decreaseCashStock(Number(coin));
     }
-    renderCashInventory();
     log("\uAC70\uC2A4\uB984\uB3C8 ".concat(balance, "\uC6D0 \uBC18\uD658 \uC644\uB8CC!"));
+    renderCashStock();
     initBalance();
     enablePaymentBtns();
     isRefundingChange = false;
@@ -233,7 +232,8 @@ function useCash(amount) {
         return __generator(this, function (_a) {
             switch (_a.label) {
                 case 0:
-                    disablePaymentBtns("cash");
+                    togglePaymentBtn("cash");
+                    paymentMethod = "cash";
                     cashLog("지폐 확인 중...");
                     return [4 /*yield*/, validateCash(amount)];
                 case 1:
@@ -250,10 +250,10 @@ function useCash(amount) {
         });
     });
 }
-// 현금 결제 성공 하면 잔액 증가, 음료 버튼 활성화, 로그 출력
 function successCash(amount) {
     cashApproved = true;
     addToBalance(amount);
+    increaseCashStock(amount);
     cashLog("사용 가능한 지폐 확인 완료!");
 }
 function useCard() {
@@ -262,7 +262,8 @@ function useCard() {
         return __generator(this, function (_a) {
             switch (_a.label) {
                 case 0:
-                    disablePaymentBtns("card");
+                    togglePaymentBtn("card");
+                    paymentMethod = "card";
                     cardLog("결제 승인 중...");
                     return [4 /*yield*/, validateCard()];
                 case 1:
@@ -301,6 +302,18 @@ function processPayment(drink) {
         cardOrderEnd();
     }
 }
+function increaseCashStock(amount) {
+    if (cashStock[amount] !== undefined) {
+        cashStock[amount]++;
+    }
+    renderCashStock();
+}
+function decreaseCashStock(amount) {
+    if (cashStock[amount] !== undefined) {
+        cashStock[amount]--;
+    }
+    renderCashStock();
+}
 function buyDrink(drink) {
     decreaseInventory(drink);
     addToOrder(drink);
@@ -314,7 +327,8 @@ function cardOrderEnd() {
     updateDrinkBtnState();
     cardUsedOnce = false;
 }
-function checkValidate() {
+// 유효성 검사 함수 - 결제 수단 유효성 검사
+function validatePayment() {
     if (!cashApproved && paymentMethod === "cash") {
         return "사용불가능한 지폐입니다. 지폐를 다시 넣어주세요.";
     }
@@ -329,8 +343,8 @@ function checkValidate() {
     }
     return null;
 }
-// 유효성 검사 함수
-function canBuy(drink) {
+// 유효성 검사 함수 - 음료 구매 유효성 검사
+function validatePurchase(drink) {
     if (paymentMethod === "cash" && !isEnoughBalance(drink)) {
         return "잔액이 부족합니다.";
     }
@@ -343,7 +357,7 @@ function canBuy(drink) {
     return null;
 }
 function getValidateStatus(drink) {
-    return canBuy(drink) || checkValidate();
+    return validatePurchase(drink) || validatePayment();
 }
 function validateCash(amount) {
     return new Promise(function (resolve) {
@@ -375,7 +389,7 @@ function canGiveChange(drink) {
 }
 // 잔돈 찾기
 function findChange(amount) {
-    var coins = Object.keys(cashInventory)
+    var coins = Object.keys(cashStock)
         .map(Number)
         .sort(function (a, b) { return b - a; });
     function dfs(remaining, index, tempInventory, currentChange) {
@@ -398,7 +412,7 @@ function findChange(amount) {
         }
         return null;
     }
-    return dfs(amount, 0, __assign({}, cashInventory), {});
+    return dfs(amount, 0, __assign({}, cashStock), {});
 }
 // 초기화 + 유틸함수
 function init() {
@@ -417,7 +431,7 @@ function initUserOrders() {
 }
 function initInventory() {
     renderInventory();
-    renderCashInventory();
+    renderCashStock();
 }
 // 모든 버튼 디바운스 적용 - 중복 클릭방지
 function initEventListeners() {
