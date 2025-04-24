@@ -1,0 +1,140 @@
+* {
+    box-sizing: border-box;
+}
+html {
+    width: 100%;
+    height: 100%;
+}
+body {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+h1,h2 {
+    margin: 30px 0 20px;
+    font-weight: bold;
+}
+
+h3 {
+    margin: 10px 0;
+    font-size: 19px;
+}
+
+p {
+    margin: 0;
+    font-size: 19px;
+}
+
+button {
+    padding: 9px 11px;
+    border-radius: 5px;
+    border: 2px solid black;
+    background: #fff;
+    cursor: pointer;
+    font-size: 18px;
+}
+
+.inactive {
+    background: #fff;
+    border: 2px solid #ccc;
+    color: #ccc;
+    cursor: not-allowed;
+}
+
+button:hover {
+    background: #f0f0f0;
+}
+
+button:disabled {
+    border: 2px solid #ccc;
+    cursor: not-allowed;
+}
+
+.row {
+    width: 80%;
+    height: 100%;
+    display: flex;
+    flex-direction: row;
+    align-items: start;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.container {
+    width: 600px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 20px 0;
+    border-radius: 50px;
+    background: #F7F6F8;
+}
+
+
+.inside {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 400px;
+    padding: 0 0 20px 0;
+    margin-left: 5dvh;
+    border-radius: 50px;
+    border: 2px solid black;
+}   
+
+
+.cash-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    width: 300px;
+}
+
+.drink-box {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: space-between;
+    gap: 10px;
+}
+.inventory-container{
+    border: 1px solid black;
+    border-bottom: none;
+}
+.inventory-container p {
+    padding: 10px;
+    border-bottom: 1px solid black;
+}
+.log-container{
+    width: 80%;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: center;
+}
+.log-box{
+    border: 2px solid black;
+    min-height: 110px;
+    width: 100%;
+    padding: 20px;
+    border-radius: 30px;
+}
+.log-msg {
+    display: block;
+    width: 100%;
+    margin-top: 10px;
+    color: red;
+}
+.balance{
+    font-size: 20px;
+}
+.inner{
+    min-height: 150px;
+}
+.type-50 .inner{
+    width: calc(50% - 20px);
+}

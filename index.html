@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8" />
+    <link rel="stylesheet" href="./style.css">
+    <title>Vending Machine</title>
+</head>
+<body>
+    <div class="container">
+        <h1>자판기</h1>
+        <div class="row">
+            <p id="balance" class="balance">잔액: 0원</p>
+            <button id="return-change" onclick="returnChange()">거스름돈 반환</button>
+            <button id="end" onclick="orderEnd()">주문 종료</button>
+        </div>
+        <div class="_paymentContainer row">
+            <div class="inner">
+                <h2>현금 결제</h2>
+                <div class="cash-container _cashContainer">
+                    <button onclick="useCash(100)">100원</button>
+                    <button onclick="useCash(500)">500원</button>
+                    <button onclick="useCash(1000)">1,000원</button>
+                    <button onclick="useCash(5000)">5,000원</button>
+                    <button onclick="useCash(10000)">10,000원</button>
+                    <div class="log-msg" id="cash-log"></div>
+                </div>
+            </div>
+            <div class="inner">
+                <h2>카드 결제</h2>
+                <div class="_cardContainer">
+                    <button onclick="useCard()">카드</button>
+                    <div class="log-msg" id="card-log"></div>
+                </div>
+            </div>
+        </div>
+    
+        <div class="row type-50">
+            <div class="inner"> 
+                <h2>음료 선택</h2>
+                <div class="drink-box">
+                    <button id="cola" onclick="selectDrink('cola')" class="inactive">콜라 (1100원)</button>
+                    <button id="water" onclick="selectDrink('water')" class="inactive">물 (600원)</button>
+                    <button id="coffee" onclick="selectDrink('coffee')" class="inactive">커피 (700원)</button>
+                </div>
+            </div>
+            <div class="inner">
+                <h2>획득한 음료</h2>
+                <div class="log-container">
+                    <div id="selected-drink-log" class="log-box"></div>
+                </div>
+            </div>
+        </div>
+        <div class="log-container">
+            <h2>안내문구</h2>
+            <div id="log" class="log-box"></div>
+        </div>
+    </div>
+    <div class="inside">
+        <h2>자판기 내부</h2>
+        <div class="row">   
+            <div class="inner">
+                <h3>재고</h3>
+                <div class="inventory-container">
+                    <div id="inventory-log"></div>
+                </div>
+            </div>
+            <div class="inner">
+                <h3>보유 화폐</h3>
+                <div class="inventory-container">
+                    <div id="cash-inventory-log"></div>
+                </div>
+            </div>  
+        </div>
+    </div>
+    <script src="./main.js"></script>
+</body>
+</html>
