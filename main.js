@@ -132,22 +132,22 @@ function renderCashInventory() {
         el.innerHTML = msg;
 }
 // 버튼 / UI 조작 함수
-function refreshDrinkButtons(isRefundingChange) {
+function updateDrinkBtnState(isRefundingChange) {
     var drinks = ["cola", "water", "coffee"];
     drinks.forEach(function (drink) {
         if (isRefundingChange) {
             // 잔액 반환 중이면 유효성 검사 패스
-            updateDrinkButtonUI(drink, null);
+            updateDrinkBtnUI(drink, null);
         }
         else {
             var drinkStatus = getValidateStatus(drink); //유효성 검사
             logDrinkStateMsg(drinkStatus); // 유효성 검사 결과 메세지 출력
-            updateDrinkButtonUI(drink, drinkStatus); // 유효성 검사 결과 버튼 UI 업데이트
+            updateDrinkBtnUI(drink, drinkStatus); // 유효성 검사 결과 버튼 UI 업데이트
         }
     });
 }
 // 음료 선택 버튼 UI 업데이트
-function updateDrinkButtonUI(drink, error) {
+function updateDrinkBtnUI(drink, error) {
     var btn = document.querySelector("#".concat(drink));
     if (!btn)
         return;
@@ -190,7 +190,7 @@ function enablePaymentBtns() {
 function changeBalance(amount) {
     balance += amount;
     renderBalance();
-    refreshDrinkButtons();
+    updateDrinkBtnState();
 }
 function addToBalance(amount) {
     changeBalance(amount);
@@ -198,15 +198,15 @@ function addToBalance(amount) {
 function subtractFromBalance(amount) {
     changeBalance(-amount);
 }
-function zeroBalance() {
+function initBalance() {
     balance = 0;
     renderBalance();
-    refreshDrinkButtons(isRefundingChange);
+    updateDrinkBtnState(isRefundingChange);
 }
 function decreaseInventory(drink) {
     inventory[drink].stock--;
     renderInventory();
-    refreshDrinkButtons();
+    updateDrinkBtnState();
 }
 function addToOrder(drink) {
     userOrders.set(drink, (userOrders.get(drink) || 0) + 1);
@@ -222,7 +222,7 @@ function returnChange() {
     }
     renderCashInventory();
     log("\uAC70\uC2A4\uB984\uB3C8 ".concat(balance, "\uC6D0 \uBC18\uD658 \uC644\uB8CC!"));
-    zeroBalance();
+    initBalance();
     enablePaymentBtns();
     isRefundingChange = false;
 }
@@ -268,7 +268,7 @@ function useCard() {
                 case 1:
                     approved = _a.sent();
                     cardApproved = approved;
-                    refreshDrinkButtons();
+                    updateDrinkBtnState();
                     if (approved) {
                         cardLog("결제 승인 성공!");
                     }
@@ -285,7 +285,7 @@ function useCard() {
 function selectDrink(drink) {
     var error = getValidateStatus(drink);
     if (error) {
-        refreshDrinkButtons();
+        updateDrinkBtnState();
         return log(error);
     }
     processPayment(drink);
@@ -298,7 +298,7 @@ function processPayment(drink) {
     if (paymentMethod === "card") {
         log("\uCE74\uB4DC ".concat(inventory[drink].price, "\uC6D0 \uC2B9\uC778 \uC644\uB8CC!"));
         buyDrink(drink);
-        orderEnd();
+        cardOrderEnd();
     }
 }
 function buyDrink(drink) {
@@ -307,11 +307,11 @@ function buyDrink(drink) {
     log("".concat(drink, " \uAD6C\uB9E4 \uC644\uB8CC!"));
     initPaymentLog();
 }
-function orderEnd() {
+function cardOrderEnd() {
     cardUsedOnce = true;
     initPaymentLog();
     initPaymentMethod();
-    refreshDrinkButtons();
+    updateDrinkBtnState();
     cardUsedOnce = false;
 }
 function checkValidate() {
@@ -400,9 +400,9 @@ function findChange(amount) {
     }
     return dfs(amount, 0, __assign({}, cashInventory), {});
 }
-// 초기화 + 유틸
+// 초기화 + 유틸함수
 function init() {
-    zeroBalance();
+    initBalance();
     initPaymentMethod();
     initUserOrders();
     initInventory();
