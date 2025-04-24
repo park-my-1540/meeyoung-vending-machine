@@ -216,14 +216,20 @@ function addToOrder(drink) {
 function refundChange() {
     isRefundingChange = true;
     var change = findChange(balance);
-    for (var coin in change) {
-        decreaseCashStock(Number(coin));
+    if (change) {
+        decreaseCashStock(change);
     }
     log("\uAC70\uC2A4\uB984\uB3C8 ".concat(balance, "\uC6D0 \uBC18\uD658 \uC644\uB8CC!"));
     renderCashStock();
     initBalance();
     enablePaymentBtns();
     isRefundingChange = false;
+}
+function decreaseCashStock(change) {
+    for (var coin in change) {
+        cashStock[coin] -= change[coin];
+    }
+    renderCashStock();
 }
 // 현금 결제
 function useCash(amount) {
@@ -305,12 +311,6 @@ function processPayment(drink) {
 function increaseCashStock(amount) {
     if (cashStock[amount] !== undefined) {
         cashStock[amount]++;
-    }
-    renderCashStock();
-}
-function decreaseCashStock(amount) {
-    if (cashStock[amount] !== undefined) {
-        cashStock[amount]--;
     }
     renderCashStock();
 }

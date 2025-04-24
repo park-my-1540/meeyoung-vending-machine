@@ -189,8 +189,8 @@ function refundChange(): void {
   isRefundingChange = true;
 
   const change = findChange(balance);
-  for (const coin in change) {
-    decreaseCashStock(Number(coin));
+  if (change) {
+    decreaseCashStock(change);
   }
 
   log(`거스름돈 ${balance}원 반환 완료!`);
@@ -199,6 +199,13 @@ function refundChange(): void {
   enablePaymentBtns();
 
   isRefundingChange = false;
+}
+
+function decreaseCashStock(change: Record<number, number>): void {
+  for (const coin in change) {
+    cashStock[coin] -= change[coin];
+  }
+  renderCashStock();
 }
 
 // 현금 결제
@@ -266,13 +273,6 @@ function processPayment(drink: Drink): void {
 function increaseCashStock(amount: number): void {
   if (cashStock[amount] !== undefined) {
     cashStock[amount]++;
-  }
-  renderCashStock();
-}
-
-function decreaseCashStock(amount: number): void {
-  if (cashStock[amount] !== undefined) {
-    cashStock[amount]--;
   }
   renderCashStock();
 }
