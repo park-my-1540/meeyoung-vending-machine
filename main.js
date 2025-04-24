@@ -74,20 +74,33 @@ var LogType;
     LogType["CARD"] = "card-log";
     LogType["CASH"] = "cash-log";
 })(LogType || (LogType = {}));
-// 메세지 로그, 렌더링 함수
+// ─────────────────────────────
+//  로그 함수
+// ─────────────────────────────
+/**
+ * 지정한 로그 타입 영역에 메시지를 출력한다.
+ * @param type - 로그 영역 타입 (DEFAULT, CARD, CASH)
+ * @param msg - 출력할 메시지
+ */
 var logMessage = function (type, msg) {
     var el = document.getElementById(type);
     if (el)
         el.innerHTML = "<p>".concat(msg, "</p>");
 };
+// 각 로그타입에 대한 단축 함수
 var log = function (msg) { return logMessage(LogType.DEFAULT, msg); };
 var cardLog = function (msg) { return logMessage(LogType.CARD, msg); };
 var cashLog = function (msg) { return logMessage(LogType.CASH, msg); };
+/**
+ * 카드 및 현금 로그 영역 초기화
+ */
 var initPaymentLog = function () {
     cardLog("");
     cashLog("");
 };
-// 음료 선택에 따른 메세지 로그
+/**
+ * 음료 상태에 따른 메시지 출력 (에러가 없으면 기본 안내 문구)
+ */
 function logDrinkStateMsg(error) {
     if (error) {
         log(error);
@@ -96,11 +109,20 @@ function logDrinkStateMsg(error) {
         log("음료를 선택해주세요.");
     }
 }
+// ─────────────────────────────
+//  렌더링 함수
+// ─────────────────────────────
+/**
+ * 현재 잔액을 화면에 표시
+ */
 function renderBalance() {
-    var el = document.getElementById("balance");
+    var el = document.getElementById("balance-log");
     if (el)
         el.textContent = "\uC794\uC561: ".concat(balance.toLocaleString("ko-KR"), "\uC6D0");
 }
+/**
+ * 사용자 주문 내역을 화면에 표시
+ */
 function renderUserOrders() {
     var el = document.getElementById("selected-drink-log");
     var msg = "";
@@ -111,6 +133,9 @@ function renderUserOrders() {
     if (el)
         el.innerHTML = msg;
 }
+/**
+ * 자판기 재고 현황을 화면에 표시
+ */
 function renderInventory() {
     var el = document.getElementById("inventory-log");
     var msg = "";
@@ -121,8 +146,11 @@ function renderInventory() {
     if (el)
         el.innerHTML = msg;
 }
+/**
+ * 자판기 현금 재고 현황을 화면에 표시
+ */
 function renderCashStock() {
-    var el = document.getElementById("cash-inventory-log");
+    var el = document.getElementById("cashStock-log");
     var msg = "";
     for (var _i = 0, _a = Object.entries(cashStock); _i < _a.length; _i++) {
         var _b = _a[_i], key = _b[0], value = _b[1];
@@ -131,37 +159,45 @@ function renderCashStock() {
     if (el)
         el.innerHTML = msg;
 }
-// 버튼 / UI 조작 함수
-function updateDrinkBtnState(isRefundingChange) {
+// ─────────────────────────────
+//  버튼 / UI 조작 함수
+// ─────────────────────────────
+/**
+ * 현재 상태에 따라 음료 버튼의 활성화 여부를 갱신
+ */
+function updateDrinkBtnState() {
     var drinks = ["cola", "water", "coffee"];
     drinks.forEach(function (drink) {
-        if (isRefundingChange) {
-            // 잔액 반환 중이면 유효성 검사 패스
-            updateDrinkBtnUI(drink, null);
-        }
-        else {
-            var drinkStatus = getValidateStatus(drink); //유효성 검사
-            logDrinkStateMsg(drinkStatus); // 유효성 검사 결과 메세지 출력
-            updateDrinkBtnUI(drink, drinkStatus); // 유효성 검사 결과 버튼 UI 업데이트
+        var validStateMsg = isRefundingChange ? null : getValidateStateMsg(drink);
+        toggleDrinkBtn(drink, validStateMsg);
+        if (!isRefundingChange) {
+            logDrinkStateMsg(validStateMsg);
         }
     });
 }
-// 음료 선택 버튼 UI 업데이트
-function updateDrinkBtnUI(drink, error) {
+/**
+ * 음료 선택 활성화/비활성화 상태 변경
+ * @param drink - 음료 종류
+ * @param validStateMsg - 유효성 검사 결과 메시지 null이면 성공
+ */
+function toggleDrinkBtn(drink, validStateMsg) {
     var btn = document.querySelector("#".concat(drink));
     if (!btn)
         return;
-    if (error) {
+    if (validStateMsg !== null) {
         btn.classList.add("inactive");
-        btn.setAttribute("title", error);
+        btn.setAttribute("title", validStateMsg);
     }
     else {
         btn.classList.remove("inactive");
         btn.removeAttribute("title");
     }
 }
-// 결제 수단 버튼 비활성화
-function togglePaymentBtn(method) {
+/**
+ * 결제 수단 버튼 비활성화
+ * @param method - 결제 수단 (cash, card)
+ */
+function disableOtherPaymentMethod(method) {
     var _a, _b;
     if (method === "cash") {
         document
@@ -176,7 +212,9 @@ function togglePaymentBtn(method) {
         (_b = document.querySelector("#return-change")) === null || _b === void 0 ? void 0 : _b.setAttribute("disabled", "true");
     }
 }
-// 결제 수단 버튼 활성화
+/**
+ * 결제 수단 버튼 활성화
+ */
 function enablePaymentBtns() {
     var _a;
     document
@@ -184,62 +222,103 @@ function enablePaymentBtns() {
         .forEach(function (btn) { return btn.removeAttribute("disabled"); });
     (_a = document.querySelector("#return-change")) === null || _a === void 0 ? void 0 : _a.removeAttribute("disabled");
 }
-// 상태 변경 함수
-// 잔액이 변경 되면 재렌더링, 음료 버튼 재세팅
+// ─────────────────────────────
+//  상태 변경 함수
+// ─────────────────────────────
+/**
+ * 잔액 증가
+ * @param amount - 증가할 금액
+ */
+function addToBalance(amount) {
+    changeBalance(amount);
+}
+/**
+ * 잔액 감소
+ * @param amount - 감소할 금액
+ */
+function subtractFromBalance(amount) {
+    changeBalance(-amount);
+}
+/**
+ * 잔액 변경
+ * @param amount - 변경할 금액
+ */
 function changeBalance(amount) {
     balance += amount;
     renderBalance();
     updateDrinkBtnState();
 }
-function addToBalance(amount) {
-    changeBalance(amount);
-}
-function subtractFromBalance(amount) {
-    changeBalance(-amount);
-}
+/**
+ * 잔액 초기화
+ */
 function initBalance() {
     balance = 0;
     renderBalance();
-    updateDrinkBtnState(isRefundingChange);
+    updateDrinkBtnState();
 }
+/**
+ * 음료 재고 감소
+ * @param drink - 음료 종류
+ */
 function decreaseInventory(drink) {
     inventory[drink].stock--;
     renderInventory();
     updateDrinkBtnState();
 }
-function addToOrder(drink) {
+/**
+ * 사용자 주문 내역 증가
+ * @param drink - 음료 종류
+ */
+function addToUserOrder(drink) {
     userOrders.set(drink, (userOrders.get(drink) || 0) + 1);
     renderUserOrders();
 }
-// 주요 로직 함수
-// 잔액 반환
-function refundChange() {
-    isRefundingChange = true;
-    var change = findChange(balance);
-    if (change) {
-        decreaseCashStock(change);
-    }
-    log("\uAC70\uC2A4\uB984\uB3C8 ".concat(balance, "\uC6D0 \uBC18\uD658 \uC644\uB8CC!"));
+/**
+ * 현금 재고 증가
+ * @param amount - 증가할 금액
+ */
+function increaseCashStock(amount) {
+    cashStock[amount]++;
     renderCashStock();
-    initBalance();
-    enablePaymentBtns();
-    isRefundingChange = false;
 }
+/**
+ * 현금 재고 감소
+ * @param change - 감소할 현금 재고
+ */
 function decreaseCashStock(change) {
     for (var coin in change) {
         cashStock[coin] -= change[coin];
     }
     renderCashStock();
 }
-// 현금 결제
+// ─────────────────────────────
+//  주요 로직 함수
+// ─────────────────────────────
+/**
+ * 잔액 반환
+ */
+function refundChange() {
+    isRefundingChange = true;
+    var change = getChangeCombination(balance);
+    if (change) {
+        decreaseCashStock(change);
+    }
+    log("\uAC70\uC2A4\uB984\uB3C8 ".concat(balance, "\uC6D0 \uBC18\uD658 \uC644\uB8CC!"));
+    initBalance();
+    initPaymentMethod();
+    isRefundingChange = false;
+}
+/**
+ * 현금 결제
+ * @param amount - 결제할 금액
+ */
 function useCash(amount) {
     return __awaiter(this, void 0, void 0, function () {
         var approved;
         return __generator(this, function (_a) {
             switch (_a.label) {
                 case 0:
-                    togglePaymentBtn("cash");
-                    paymentMethod = "cash";
+                    setPaymentMethod("cash");
                     cashLog("지폐 확인 중...");
                     return [4 /*yield*/, validateCash(amount)];
                 case 1:
@@ -256,20 +335,42 @@ function useCash(amount) {
         });
     });
 }
+/**
+ * 현금 결제 성공
+ * @param amount - 결제할 금액
+ */
 function successCash(amount) {
     cashApproved = true;
-    addToBalance(amount);
-    increaseCashStock(amount);
+    processCashReceipt(amount);
     cashLog("사용 가능한 지폐 확인 완료!");
 }
+/**
+ * 현금 결제 처리
+ * @param amount - 결제할 금액
+ */
+function processCashReceipt(amount) {
+    addToBalance(amount);
+    increaseCashStock(amount);
+}
+/**
+ * 결제 수단 설정
+ * @param method - 결제 수단 (cash, card)
+ */
+function setPaymentMethod(method) {
+    paymentMethod = method;
+    disableOtherPaymentMethod(method);
+}
+/**
+ * 카드 결제
+ * @param amount - 결제할 금액
+ */
 function useCard() {
     return __awaiter(this, void 0, void 0, function () {
         var approved;
         return __generator(this, function (_a) {
             switch (_a.label) {
                 case 0:
-                    togglePaymentBtn("card");
-                    paymentMethod = "card";
+                    setPaymentMethod("card");
                     cardLog("결제 승인 중...");
                     return [4 /*yield*/, validateCard()];
                 case 1:
@@ -288,38 +389,46 @@ function useCard() {
         });
     });
 }
-// 유저의 선택에 따라 음료 구매 처리
+/**
+ * 유저의 선택에 따라 음료 구매 처리
+ * @param drink - 음료 종류
+ */
 function selectDrink(drink) {
-    var error = getValidateStatus(drink);
-    if (error) {
+    var validateStateMsg = getValidateStateMsg(drink); //null 이면 유효성 통과
+    if (validateStateMsg) {
         updateDrinkBtnState();
-        return log(error);
+        return log(validateStateMsg);
     }
     processPayment(drink);
 }
+/**
+ * 결제 처리
+ * @param drink - 음료 종류
+ */
 function processPayment(drink) {
     if (paymentMethod === "cash") {
         subtractFromBalance(inventory[drink].price);
         buyDrink(drink);
     }
     if (paymentMethod === "card") {
-        log("\uCE74\uB4DC ".concat(inventory[drink].price, "\uC6D0 \uC2B9\uC778 \uC644\uB8CC!"));
         buyDrink(drink);
+        log("\uCE74\uB4DC ".concat(inventory[drink].price, "\uC6D0 \uC2B9\uC778 \uC644\uB8CC!"));
         cardOrderEnd();
     }
 }
-function increaseCashStock(amount) {
-    if (cashStock[amount] !== undefined) {
-        cashStock[amount]++;
-    }
-    renderCashStock();
-}
+/**
+ * 음료 구매
+ * @param drink - 음료 종류
+ */
 function buyDrink(drink) {
     decreaseInventory(drink);
-    addToOrder(drink);
+    addToUserOrder(drink);
     log("".concat(drink, " \uAD6C\uB9E4 \uC644\uB8CC!"));
     initPaymentLog();
 }
+/**
+ * 카드 결제 종료
+ */
 function cardOrderEnd() {
     cardUsedOnce = true;
     initPaymentLog();
@@ -327,7 +436,13 @@ function cardOrderEnd() {
     updateDrinkBtnState();
     cardUsedOnce = false;
 }
-// 유효성 검사 함수 - 결제 수단 유효성 검사
+// ─────────────────────────────
+//  유효성 검사 함수
+// ─────────────────────────────
+/**
+ * 결제 유효성 검사
+ * @returns - 유효성 검사 결과 메시지 null이면 성공
+ */
 function validatePayment() {
     if (!cashApproved && paymentMethod === "cash") {
         return "사용불가능한 지폐입니다. 지폐를 다시 넣어주세요.";
@@ -343,7 +458,11 @@ function validatePayment() {
     }
     return null;
 }
-// 유효성 검사 함수 - 음료 구매 유효성 검사
+/**
+ * 음료 구매 유효성 검사
+ * @param drink - 음료 종류
+ * @returns - 유효성 검사 결과 메시지 null이면 성공
+ */
 function validatePurchase(drink) {
     if (paymentMethod === "cash" && !isEnoughBalance(drink)) {
         return "잔액이 부족합니다.";
@@ -351,14 +470,24 @@ function validatePurchase(drink) {
     if (!isEnoughStock(drink)) {
         return "재고가 부족합니다.";
     }
-    if (paymentMethod === "cash" && !canGiveChange(drink)) {
+    if (paymentMethod === "cash" && !isChangeAvailable(drink)) {
         return "잔돈이 부족하여 해당음료를 구매할 수 없습니다. 다른 음료를 선택해주세요.";
     }
     return null;
 }
-function getValidateStatus(drink) {
+/**
+ * 음료 구매 유효성 검사
+ * @param drink - 음료 종류
+ * @returns {boolean} - 유효성 검사 결과 메시지 null이면 성공
+ */
+function getValidateStateMsg(drink) {
     return validatePurchase(drink) || validatePayment();
 }
+/**
+ * 현금 결제 유효성 검사
+ * @param amount - 결제할 금액
+ * @returns {boolean} - 유효성 검사 결과 메시지
+ */
 function validateCash(amount) {
     return new Promise(function (resolve) {
         setTimeout(function () {
@@ -366,6 +495,10 @@ function validateCash(amount) {
         }, CASH_DELAY_MS);
     });
 }
+/**
+ * 카드 결제 유효성 검사
+ * @returns {boolean} - 유효성 검사 결과 메시지
+ */
 function validateCard() {
     return new Promise(function (resolve) {
         setTimeout(function () {
@@ -373,22 +506,38 @@ function validateCard() {
         }, CARD_DELAY_MS);
     });
 }
-// 잔액이 충분한가
+/**
+ * 잔액이 충분한가
+ * @param drink - 음료 종류
+ * @returns {boolean} - 잔액이 충분한가
+ */
 function isEnoughBalance(drink) {
     return balance >= inventory[drink].price;
 }
-// 재고가 충분한가
+/**
+ * 재고가 충분한가
+ * @param drink - 음료 종류
+ * @returns {boolean} - 재고가 충분한가
+ */
 function isEnoughStock(drink) {
     return inventory[drink].stock > 0;
 }
-// 거슬러줄 잔돈이 있는가
-function canGiveChange(drink) {
+/**
+ * 거슬러줄 잔돈이 있는가
+ * @param drink - 음료 종류
+ * @returns {boolean} - 거슬러줄 잔돈이 있는가
+ */
+function isChangeAvailable(drink) {
     var changeAmount = balance - inventory[drink].price;
-    var change = findChange(changeAmount);
+    var change = getChangeCombination(changeAmount);
     return change !== null;
 }
-// 잔돈 찾기
-function findChange(amount) {
+/**
+ * 잔돈 찾기
+ * @param amount - 잔돈 찾기
+ * @returns {Record<CashAmount, number> | null} - 잔돈 찾기
+ */
+function getChangeCombination(amount) {
     var coins = Object.keys(cashStock)
         .map(Number)
         .sort(function (a, b) { return b - a; });
@@ -414,26 +563,42 @@ function findChange(amount) {
     }
     return dfs(amount, 0, __assign({}, cashStock), {});
 }
-// 초기화 + 유틸함수
+// ─────────────────────────────
+//  초기화 + 유틸함수
+// ─────────────────────────────
+/**
+ * 초기화
+ */
 function init() {
     initBalance();
     initPaymentMethod();
     initUserOrders();
     initInventory();
 }
+/**
+ * 결제 수단 초기화
+ */
 function initPaymentMethod() {
     paymentMethod = null;
     enablePaymentBtns();
 }
+/**
+ * 사용자 주문 내역 초기화
+ */
 function initUserOrders() {
     userOrders.clear();
     renderUserOrders();
 }
+/**
+ * 음료 재고 초기화
+ */
 function initInventory() {
     renderInventory();
     renderCashStock();
 }
-// 모든 버튼 디바운스 적용 - 중복 클릭방지
+/**
+ * 모든 버튼 디바운스 적용 - 중복 클릭방지
+ */
 function initEventListeners() {
     document.querySelectorAll("button").forEach(function (btn) {
         var handler = btn.onclick;
@@ -442,6 +607,12 @@ function initEventListeners() {
         }
     });
 }
+/**
+ * 디바운스
+ * @param func - 함수
+ * @param delay - 딜레이
+ * @returns {Function} - 디바운스 함수
+ */
 function debounce(func, delay) {
     var _this = this;
     var timer = null;

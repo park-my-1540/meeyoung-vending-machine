@@ -21,6 +21,8 @@ let cashStock = {
   100: 10,
 };
 
+type CashAmount = keyof typeof cashStock;
+
 const CASH_DELAY_MS = 500;
 const CARD_DELAY_MS = 1000;
 const APPROVE_RATE = 0.8; // 승인 확률
@@ -41,22 +43,36 @@ enum LogType {
   CASH = "cash-log",
 }
 
-// 메세지 로그, 렌더링 함수
+// ─────────────────────────────
+//  로그 함수
+// ─────────────────────────────
+
+/**
+ * 지정한 로그 타입 영역에 메시지를 출력한다.
+ * @param type - 로그 영역 타입 (DEFAULT, CARD, CASH)
+ * @param msg - 출력할 메시지
+ */
 const logMessage = (type: LogType, msg: string): void => {
   const el = document.getElementById(type);
   if (el) el.innerHTML = `<p>${msg}</p>`;
 };
 
+// 각 로그타입에 대한 단축 함수
 const log = (msg: string): void => logMessage(LogType.DEFAULT, msg);
 const cardLog = (msg: string): void => logMessage(LogType.CARD, msg);
 const cashLog = (msg: string): void => logMessage(LogType.CASH, msg);
 
+/**
+ * 카드 및 현금 로그 영역 초기화
+ */
 const initPaymentLog = (): void => {
   cardLog("");
   cashLog("");
 };
 
-// 음료 선택에 따른 메세지 로그
+/**
+ * 음료 상태에 따른 메시지 출력 (에러가 없으면 기본 안내 문구)
+ */
 function logDrinkStateMsg(error: string | null): void {
   if (error) {
     log(error);
@@ -65,11 +81,21 @@ function logDrinkStateMsg(error: string | null): void {
   }
 }
 
+// ─────────────────────────────
+//  렌더링 함수
+// ─────────────────────────────
+
+/**
+ * 현재 잔액을 화면에 표시
+ */
 function renderBalance(): void {
-  const el = document.getElementById("balance");
+  const el = document.getElementById("balance-log");
   if (el) el.textContent = `잔액: ${balance.toLocaleString("ko-KR")}원`;
 }
 
+/**
+ * 사용자 주문 내역을 화면에 표시
+ */
 function renderUserOrders(): void {
   const el = document.getElementById("selected-drink-log");
   let msg = "";
@@ -79,6 +105,9 @@ function renderUserOrders(): void {
   if (el) el.innerHTML = msg;
 }
 
+/**
+ * 자판기 재고 현황을 화면에 표시
+ */
 function renderInventory(): void {
   const el = document.getElementById("inventory-log");
   let msg = "";
@@ -88,8 +117,11 @@ function renderInventory(): void {
   if (el) el.innerHTML = msg;
 }
 
+/**
+ * 자판기 현금 재고 현황을 화면에 표시
+ */
 function renderCashStock(): void {
-  const el = document.getElementById("cash-inventory-log");
+  const el = document.getElementById("cashStock-log");
   let msg = "";
   for (const [key, value] of Object.entries(cashStock)) {
     msg += `<p>${key}원 ${value}개</p>`;
@@ -97,38 +129,49 @@ function renderCashStock(): void {
   if (el) el.innerHTML = msg;
 }
 
-// 버튼 / UI 조작 함수
-function updateDrinkBtnState(isRefundingChange?: boolean): void {
+// ─────────────────────────────
+//  버튼 / UI 조작 함수
+// ─────────────────────────────
+
+/**
+ * 현재 상태에 따라 음료 버튼의 활성화 여부를 갱신
+ */
+function updateDrinkBtnState(): void {
   const drinks: Drink[] = ["cola", "water", "coffee"];
 
   drinks.forEach((drink) => {
-    if (isRefundingChange) {
-      // 잔액 반환 중이면 유효성 검사 패스
-      updateDrinkBtnUI(drink, null);
-    } else {
-      const drinkStatus = getValidateStatus(drink); //유효성 검사
-      logDrinkStateMsg(drinkStatus); // 유효성 검사 결과 메세지 출력
-      updateDrinkBtnUI(drink, drinkStatus); // 유효성 검사 결과 버튼 UI 업데이트
+    const validStateMsg = isRefundingChange ? null : getValidateStateMsg(drink);
+    toggleDrinkBtn(drink, validStateMsg);
+
+    if (!isRefundingChange) {
+      logDrinkStateMsg(validStateMsg);
     }
   });
 }
 
-// 음료 선택 버튼 UI 업데이트
-function updateDrinkBtnUI(drink: Drink, error: string | null): void {
+/**
+ * 음료 선택 활성화/비활성화 상태 변경
+ * @param drink - 음료 종류
+ * @param validStateMsg - 유효성 검사 결과 메시지 null이면 성공
+ */
+function toggleDrinkBtn(drink: Drink, validStateMsg: string | null): void {
   const btn = document.querySelector(`#${drink}`);
   if (!btn) return;
 
-  if (error) {
+  if (validStateMsg !== null) {
     btn.classList.add("inactive");
-    btn.setAttribute("title", error);
+    btn.setAttribute("title", validStateMsg);
   } else {
     btn.classList.remove("inactive");
     btn.removeAttribute("title");
   }
 }
 
-// 결제 수단 버튼 비활성화
-function togglePaymentBtn(method: PaymentMethod): void {
+/**
+ * 결제 수단 버튼 비활성화
+ * @param method - 결제 수단 (cash, card)
+ */
+function disableOtherPaymentMethod(method: PaymentMethod): void {
   if (method === "cash") {
     document
       .querySelectorAll("._cardContainer button")
@@ -142,7 +185,9 @@ function togglePaymentBtn(method: PaymentMethod): void {
   }
 }
 
-// 결제 수단 버튼 활성화
+/**
+ * 결제 수단 버튼 활성화
+ */
 function enablePaymentBtns(): void {
   document
     .querySelectorAll("._paymentContainer button")
@@ -150,68 +195,111 @@ function enablePaymentBtns(): void {
   document.querySelector("#return-change")?.removeAttribute("disabled");
 }
 
-// 상태 변경 함수
-// 잔액이 변경 되면 재렌더링, 음료 버튼 재세팅
+// ─────────────────────────────
+//  상태 변경 함수
+// ─────────────────────────────
+/**
+ * 잔액 증가
+ * @param amount - 증가할 금액
+ */
+function addToBalance(amount: number): void {
+  changeBalance(amount);
+}
+
+/**
+ * 잔액 감소
+ * @param amount - 감소할 금액
+ */
+function subtractFromBalance(amount: number): void {
+  changeBalance(-amount);
+}
+
+/**
+ * 잔액 변경
+ * @param amount - 변경할 금액
+ */
 function changeBalance(amount: number): void {
   balance += amount;
   renderBalance();
   updateDrinkBtnState();
 }
 
-function addToBalance(amount: number): void {
-  changeBalance(amount);
-}
-
-function subtractFromBalance(amount: number): void {
-  changeBalance(-amount);
-}
-
+/**
+ * 잔액 초기화
+ */
 function initBalance(): void {
   balance = 0;
   renderBalance();
-  updateDrinkBtnState(isRefundingChange);
+  updateDrinkBtnState();
 }
 
+/**
+ * 음료 재고 감소
+ * @param drink - 음료 종류
+ */
 function decreaseInventory(drink: Drink): void {
   inventory[drink].stock--;
   renderInventory();
   updateDrinkBtnState();
 }
 
-function addToOrder(drink: Drink): void {
+/**
+ * 사용자 주문 내역 증가
+ * @param drink - 음료 종류
+ */
+function addToUserOrder(drink: Drink): void {
   userOrders.set(drink, (userOrders.get(drink) || 0) + 1);
   renderUserOrders();
 }
 
-// 주요 로직 함수
-// 잔액 반환
-function refundChange(): void {
-  isRefundingChange = true;
-
-  const change = findChange(balance);
-  if (change) {
-    decreaseCashStock(change);
-  }
-
-  log(`거스름돈 ${balance}원 반환 완료!`);
+/**
+ * 현금 재고 증가
+ * @param amount - 증가할 금액
+ */
+function increaseCashStock(amount: CashAmount): void {
+  cashStock[amount]++;
   renderCashStock();
-  initBalance();
-  enablePaymentBtns();
-
-  isRefundingChange = false;
 }
 
-function decreaseCashStock(change: Record<number, number>): void {
+/**
+ * 현금 재고 감소
+ * @param change - 감소할 현금 재고
+ */
+function decreaseCashStock(change: Record<CashAmount, number>): void {
   for (const coin in change) {
     cashStock[coin] -= change[coin];
   }
   renderCashStock();
 }
 
-// 현금 결제
-async function useCash(amount: number): Promise<void> {
-  togglePaymentBtn("cash");
-  paymentMethod = "cash";
+// ─────────────────────────────
+//  주요 로직 함수
+// ─────────────────────────────
+
+/**
+ * 잔액 반환
+ */
+function refundChange(): void {
+  isRefundingChange = true;
+
+  const change = getChangeCombination(balance);
+  if (change) {
+    decreaseCashStock(change);
+  }
+
+  log(`거스름돈 ${balance}원 반환 완료!`);
+  initBalance();
+  initPaymentMethod();
+
+  isRefundingChange = false;
+}
+
+/**
+ * 현금 결제
+ * @param amount - 결제할 금액
+ */
+async function useCash(amount: CashAmount): Promise<void> {
+  setPaymentMethod("cash");
   cashLog("지폐 확인 중...");
 
   const approved: boolean = await validateCash(amount);
@@ -223,17 +311,40 @@ async function useCash(amount: number): Promise<void> {
   }
 }
 
-function successCash(amount: number): void {
+/**
+ * 현금 결제 성공
+ * @param amount - 결제할 금액
+ */
+function successCash(amount: CashAmount): void {
   cashApproved = true;
-  addToBalance(amount);
-  increaseCashStock(amount);
-
+  processCashReceipt(amount);
   cashLog("사용 가능한 지폐 확인 완료!");
 }
 
+/**
+ * 현금 결제 처리
+ * @param amount - 결제할 금액
+ */
+function processCashReceipt(amount: CashAmount): void {
+  addToBalance(amount);
+  increaseCashStock(amount);
+}
+
+/**
+ * 결제 수단 설정
+ * @param method - 결제 수단 (cash, card)
+ */
+function setPaymentMethod(method: PaymentMethod): void {
+  paymentMethod = method;
+  disableOtherPaymentMethod(method);
+}
+
+/**
+ * 카드 결제
+ * @param amount - 결제할 금액
+ */
 async function useCard(): Promise<void> {
-  togglePaymentBtn("card");
-  paymentMethod = "card";
+  setPaymentMethod("card");
   cardLog("결제 승인 중...");
   const approved: boolean = await validateCard();
   cardApproved = approved;
@@ -248,42 +359,49 @@ async function useCard(): Promise<void> {
   }
 }
 
-// 유저의 선택에 따라 음료 구매 처리
+/**
+ * 유저의 선택에 따라 음료 구매 처리
+ * @param drink - 음료 종류
+ */
 function selectDrink(drink: Drink): void {
-  const error = getValidateStatus(drink);
-  if (error) {
+  const validateStateMsg = getValidateStateMsg(drink); //null 이면 유효성 통과
+  if (validateStateMsg) {
     updateDrinkBtnState();
-    return log(error);
+    return log(validateStateMsg);
   }
   processPayment(drink);
 }
 
+/**
+ * 결제 처리
+ * @param drink - 음료 종류
+ */
 function processPayment(drink: Drink): void {
   if (paymentMethod === "cash") {
     subtractFromBalance(inventory[drink].price);
     buyDrink(drink);
   }
   if (paymentMethod === "card") {
-    log(`카드 ${inventory[drink].price}원 승인 완료!`);
     buyDrink(drink);
+    log(`카드 ${inventory[drink].price}원 승인 완료!`);
     cardOrderEnd();
   }
 }
 
-function increaseCashStock(amount: number): void {
-  if (cashStock[amount] !== undefined) {
-    cashStock[amount]++;
-  }
-  renderCashStock();
-}
-
+/**
+ * 음료 구매
+ * @param drink - 음료 종류
+ */
 function buyDrink(drink: Drink): void {
   decreaseInventory(drink);
-  addToOrder(drink);
+  addToUserOrder(drink);
   log(`${drink} 구매 완료!`);
   initPaymentLog();
 }
 
+/**
+ * 카드 결제 종료
+ */
 function cardOrderEnd(): void {
   cardUsedOnce = true;
   initPaymentLog();
@@ -292,7 +410,14 @@ function cardOrderEnd(): void {
   cardUsedOnce = false;
 }
 
-// 유효성 검사 함수 - 결제 수단 유효성 검사
+// ─────────────────────────────
+//  유효성 검사 함수
+// ─────────────────────────────
+
+/**
+ * 결제 유효성 검사
+ * @returns - 유효성 검사 결과 메시지 null이면 성공
+ */
 function validatePayment(): string | null {
   if (!cashApproved && paymentMethod === "cash") {
     return "사용불가능한 지폐입니다. 지폐를 다시 넣어주세요.";
@@ -309,26 +434,38 @@ function validatePayment(): string | null {
   return null;
 }
 
-// 유효성 검사 함수 - 음료 구매 유효성 검사
+/**
+ * 음료 구매 유효성 검사
+ * @param drink - 음료 종류
+ * @returns - 유효성 검사 결과 메시지 null이면 성공
+ */
 function validatePurchase(drink: Drink): string | null {
   if (paymentMethod === "cash" && !isEnoughBalance(drink)) {
     return "잔액이 부족합니다.";
   }
-
   if (!isEnoughStock(drink)) {
     return "재고가 부족합니다.";
   }
-
-  if (paymentMethod === "cash" && !canGiveChange(drink)) {
+  if (paymentMethod === "cash" && !isChangeAvailable(drink)) {
     return "잔돈이 부족하여 해당음료를 구매할 수 없습니다. 다른 음료를 선택해주세요.";
   }
   return null;
 }
 
-function getValidateStatus(drink: Drink): string | null {
+/**
+ * 음료 구매 유효성 검사
+ * @param drink - 음료 종류
+ * @returns {boolean} - 유효성 검사 결과 메시지 null이면 성공
+ */
+function getValidateStateMsg(drink: Drink): string | null {
   return validatePurchase(drink) || validatePayment();
 }
 
+/**
+ * 현금 결제 유효성 검사
+ * @param amount - 결제할 금액
+ * @returns {boolean} - 유효성 검사 결과 메시지
+ */
 function validateCash(amount: number): Promise<boolean> {
   return new Promise((resolve) => {
     setTimeout(() => {
@@ -337,6 +474,10 @@ function validateCash(amount: number): Promise<boolean> {
   });
 }
 
+/**
+ * 카드 결제 유효성 검사
+ * @returns {boolean} - 유효성 검사 결과 메시지
+ */
 function validateCard(): Promise<boolean> {
   return new Promise((resolve) => {
     setTimeout(() => {
@@ -345,25 +486,43 @@ function validateCard(): Promise<boolean> {
   });
 }
 
-// 잔액이 충분한가
+/**
+ * 잔액이 충분한가
+ * @param drink - 음료 종류
+ * @returns {boolean} - 잔액이 충분한가
+ */
 function isEnoughBalance(drink: Drink): boolean {
   return balance >= inventory[drink].price;
 }
 
-// 재고가 충분한가
+/**
+ * 재고가 충분한가
+ * @param drink - 음료 종류
+ * @returns {boolean} - 재고가 충분한가
+ */
 function isEnoughStock(drink: Drink): boolean {
   return inventory[drink].stock > 0;
 }
 
-// 거슬러줄 잔돈이 있는가
-function canGiveChange(drink: Drink): boolean {
+/**
+ * 거슬러줄 잔돈이 있는가
+ * @param drink - 음료 종류
+ * @returns {boolean} - 거슬러줄 잔돈이 있는가
+ */
+function isChangeAvailable(drink: Drink): boolean {
   const changeAmount = balance - inventory[drink].price;
-  const change = findChange(changeAmount);
+  const change = getChangeCombination(changeAmount);
   return change !== null;
 }
 
-// 잔돈 찾기
-function findChange(amount: number): Record<number, number> | null {
+/**
+ * 잔돈 찾기
+ * @param amount - 잔돈 찾기
+ * @returns {Record<CashAmount, number> | null} - 잔돈 찾기
+ */
+function getChangeCombination(
+  amount: number
+): Record<CashAmount, number> | null {
   const coins = Object.keys(cashStock)
     .map(Number)
     .sort((a, b) => b - a);
@@ -371,10 +530,10 @@ function findChange(amount: number): Record<number, number> | null {
   function dfs(
     remaining: number,
     index: number,
-    tempInventory: Record<number, number>,
-    currentChange: Record<number, number>
-  ): Record<number, number> | null {
-    if (remaining === 0) return currentChange;
+    tempInventory: Partial<Record<CashAmount, number>>,
+    currentChange: Partial<Record<CashAmount, number>>
+  ): Record<CashAmount, number> | null {
+    if (remaining === 0) return currentChange as Record<CashAmount, number>;
     if (index >= coins.length) return null; // 동전 다 돌았는데도 남은 금액이 있다면 불가능
 
     const coin = coins[index];
@@ -400,8 +559,13 @@ function findChange(amount: number): Record<number, number> | null {
   return dfs(amount, 0, { ...cashStock }, {});
 }
 
-// 초기화 + 유틸함수
+// ─────────────────────────────
+//  초기화 + 유틸함수
+// ─────────────────────────────
 
+/**
+ * 초기화
+ */
 function init(): void {
   initBalance();
   initPaymentMethod();
@@ -409,22 +573,33 @@ function init(): void {
   initInventory();
 }
 
+/**
+ * 결제 수단 초기화
+ */
 function initPaymentMethod(): void {
   paymentMethod = null;
   enablePaymentBtns();
 }
 
+/**
+ * 사용자 주문 내역 초기화
+ */
 function initUserOrders(): void {
   userOrders.clear();
   renderUserOrders();
 }
 
+/**
+ * 음료 재고 초기화
+ */
 function initInventory(): void {
   renderInventory();
   renderCashStock();
 }
 
-// 모든 버튼 디바운스 적용 - 중복 클릭방지
+/**
+ * 모든 버튼 디바운스 적용 - 중복 클릭방지
+ */
 function initEventListeners(): void {
   document.querySelectorAll("button").forEach((btn) => {
     const handler = btn.onclick;
@@ -434,6 +609,12 @@ function initEventListeners(): void {
   });
 }
 
+/**
+ * 디바운스
+ * @param func - 함수
+ * @param delay - 딜레이
+ * @returns {Function} - 디바운스 함수
+ */
 function debounce(
   func: (...args: any[]) => void,
   delay: number
