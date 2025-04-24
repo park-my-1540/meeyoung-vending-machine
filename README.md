@@ -12,6 +12,10 @@
 - Typescript
 - HTML / CSS
 
+## 다이어그램
+<img width="1492" alt="diagram" src="https://github.com/user-attachments/assets/81e9feaa-64de-4c05-a5a3-3b6c9203e490" />
+
+
 ## 주요 기능
 - 현금 또는 카드로 결제 가능
 - 음료 선택 및 재고 감소
